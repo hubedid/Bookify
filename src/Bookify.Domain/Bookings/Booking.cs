@@ -45,5 +45,32 @@ namespace Bookify.Domain.Bookings
         public DateTime? CompletedOnUtc { get; private set; }
         public DateTime? CancelledOnUtc { get; private set; }
 
+        public static Booking Reserve(
+            Apartment apartment,
+            Guid userId,
+            DateRange duration,
+            DateTime utcNow,
+            PricingService pricingService)
+        {
+            var pricingDetail = pricingService.CalculatePrice(apartment, duration);
+
+            var booking = new Booking(
+                Guid.NewGuid(),
+                apartment.Id,
+                userId,
+                duration,
+                pricingDetail.PriceForPeriod,
+                pricingDetail.CleaningFee,
+                pricingDetail.AmenitiesUpCharge,
+                pricingDetail.TotalPrice,
+                BookingStatus.Reserved,
+                utcNow);
+
+            booking.RaiseDomainEvent(new BookingReservedDomainEvent(booking.Id));
+
+            apartment.LastBookedOnUtc = utcNow;
+
+            return booking;
+        }
     }
 }
